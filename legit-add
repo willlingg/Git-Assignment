@@ -1,0 +1,121 @@
+#!/usr/bin/env dash
+
+
+#Key to get to the committed files
+encode_key="locked"
+
+arguments=$#
+
+#Checking if .legit file exists
+if [ ! -d .legit ]; then
+    echo "legit-add: error: no .legit directory containing legit repository exists"
+    exit 1
+fi
+
+#Make index inside .legit
+if [ ! -d "./.legit/index" ]; then
+    mkdir "./.legit/index" 2>&1
+fi
+path_index="./.legit/index"
+
+#Making staging area. Will be copying index into staging area before commit
+if [ ! -d "./.legit/deletion" ]; then
+    mkdir "./.legit/deletion" 2>&1
+fi
+
+if [ ! -d "./.legit/staging" ]; then
+    mkdir "./.legit/staging" 2>&1
+fi
+path_staging="./.legit/staging"
+
+#Checking if more than one file is given
+if [ $arguments -le 0 ]; then
+    echo "usage: legit-add <filenames>"
+    exit 1
+fi
+
+#checking if any file arguments begin with '-'
+for var in "$@"; do
+    if expr $var : '^-' > /dev/null; then
+        echo "usage: legit-add <filenames>"
+        exit 1
+    fi
+done
+
+
+#We need to check if any commits have been made
+if [ ! -d "./.legit/commit_dir" ]; then
+    no_of_commits=-1
+else
+    path_commit_dir="./.legit/commit_dir"
+    no_of_commits=`ls -l $path_commit_dir | grep -c ^d`
+    no_of_commits=`expr $no_of_commits - 1`
+fi
+
+
+#First, we copy over the previous commit into the index
+if [ $no_of_commits -ge 0 ]; then
+    #Checking if previous commit file is empty or not
+    if [ ! `ls -A $path_commit_dir/commit$no_of_commits | wc -m` -eq 0 2>/dev/null ]; then
+        for file in "$path_commit_dir/commit"$no_of_commits/*; do
+            cp $file $path_index
+        done
+        #Removing the encryption key from the committed file
+        for file in $path_index/*; do
+            renamed=${file%"$encode_key"}
+            mv $file $renamed
+        done
+    fi
+fi
+
+#Checking if argument files exist within the directory
+#Also checks if argument has valid characters [A-Za-z0-9\._-]*
+for file in "$@"; do
+    #Checking if filenames have valid characters
+    if ! echo $file | egrep -q '^[A-Za-z0-9]+[\._-]*'; then
+        echo "legit-add: error: invalid filename '$file'"
+        exit 1
+    #Checking if this is a deletion case. Remove file from index if it hasn't been committed
+    elif [ -f "$path_index/$file" ] && [ ! -f $file ]; then
+        if [ -f "$path_commit_dir/commit"$no_of_commits/$file$encode_key ]; then
+            cp ./.legit/index/$file ./.legit/deletion/$file #we copy the deleted file if its been in the last commit
+            rm ./.legit/index/$file
+        else
+            rm ./.legit/index/$file
+        fi
+    #As long as the file is in the working directory, we copy it to the index
+    elif [ -f $file ]; then
+        cp $file ./.legit/index
+    #If the file simply does not exist anywhere we run the error message
+    elif [ ! -f $file ]; then
+        echo "legit-add: error: can not open '$file'"
+        exit 1
+    fi
+done
+
+
+#This chunk of check if the files in the index are exactly the same as the previous commit
+#If all the files are the same, then we wipe the index as theres technically nothing to commit
+if [ $no_of_commits -ge 0 ]; then
+    for file in $path_index/*; do
+        mv $file $file$encode_key 2>/dev/null #Recoding so we are able to compare with previous commit file
+    done
+    if ! diff "$path_commit_dir/commit"$no_of_commits $path_index >/dev/null 2>&1; then #If there is a difference, we keep the entire index
+        for file in $path_index/*; do
+            renamed=${file%"$encode_key"}
+            mv $file $renamed 2>/dev/null
+        done
+    else
+        for file in $path_index/*; do #If there are no differences, we wipe the index because its the same as the last commit
+            rm $file
+        done
+    fi
+fi
+
+#Copying the previous index to the staging area
+rm -rf $path_staging/* 2>/dev/null
+if [ ! `ls -A $path_index | wc -m` -eq 0 2>/dev/null ]; then
+    for file in $path_index/*; do
+        cp $file $path_staging
+    done
+fi

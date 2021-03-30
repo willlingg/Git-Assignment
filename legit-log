@@ -1,0 +1,29 @@
+#!/usr/bin/env dash
+
+args=$#
+
+
+#Checks if .legit exists
+if [ ! -d .legit ]; then
+    echo "legit-log: error: no .legit directory containing legit repository exists"
+    exit 1
+fi
+
+#Checking if we have commits
+if [ ! -d "./.legit/commit_dir" ]; then
+    echo "legit-log: error: your repository does not have any commits yet"
+    exit 1
+fi
+
+
+#Make sure we're using it correctly
+if [ $args -ne 0 ]; then
+    echo "usage: legit-log"
+    exit 1
+fi
+
+#We need to check how many commits we have in the log
+no_of_commits=`ls -l "./.legit/commit_dir" | grep -c ^d`
+no_of_commits=`expr $no_of_commits + 1`
+cd .legit
+tail -r -n $no_of_commits commit_log

@@ -1,0 +1,84 @@
+#!/usr/bin/env dash
+
+args=$#
+
+encode_key=locked
+
+#Checking if .legit repository exists
+if [ ! -d .legit ]; then
+    echo "legit-log: error: no .legit directory containing legit repository exists"
+    exit 1
+fi
+
+#Checking if we have commits
+if [ ! -d "./.legit/commit_dir" ]; then
+    echo "legit-log: error: your repository does not have any commits yet"
+    exit 1
+fi
+no_of_commits=`ls -A $path_commit_dir | grep -c ^d`
+path_commit_dir="./.legit/commit_dir/commit"
+path_index="./.legit/staging"
+
+#Making sure we have the correct number of arguments
+if [ $args -ne 1 ]; then
+    echo "usage: legit-show <commit>:<filename>"
+    exit 1
+fi
+
+
+argument="$1"
+colon=":"
+#If the colon is not in the argument...
+if ! test "${argument#*$colon}" != "$argument"; then
+     if echo $argument | grep -q ^[a-zA-Z0-9%^@+-_/!]*; then
+         echo "legit-show: error: invalid object $1"
+         exit 1
+     fi
+#If the argument has a colon
+else
+    filename=`echo $argument | cut -d ':' -f2`
+    commit_num=`echo $argument | cut -d ':' -f1`
+    #If commit argument is valid or if commit exists
+    if echo $commit_num | grep -q '[^0-9]'; then
+        echo "legit-show: error: unknown commit '$commit_num'"
+        exit 1
+    elif [ $commit_num -gt $no_of_commits >/dev/null 2>&1 ]; then
+        echo "legit-show: error: unknown commit '$commit_num'"
+        exit 1
+    fi
+    #If the filename has non-alphanumeric characters then it is invalid
+    if echo $filename | grep -q '[^a-zA-Z0-9\._-]'; then
+        echo "legit-show: error: invalid filename '$filename'"
+        exit 1
+    elif [ -z $filename ]; then
+        echo "legit-show: error: invalid filename '$filename'"
+        exit 1
+    fi
+fi
+
+
+#If there is no commit argument we look at the index
+if [ ! -z $commit_num ]; then
+    for file in "$path_commit_dir"$commit_num/*; do
+        renamed=${file%"$encode_key"}
+        endbit=`echo ${renamed##*/}`
+        if [ $endbit = $filename >/dev/null 2>&1 ]; then
+            cd "$path_commit_dir"$commit_num
+            cat $filename$encode_key
+            exit 0
+        fi
+    done
+    echo "legit-show: error: '$filename' not found in commit $commit_num"
+    exit 1
+elif [ -z $commit_num ]; then
+    for file in $path_index/*; do
+        indexfile=`echo ${file##*/}`
+        if [ $indexfile = $filename >/dev/null 2>&1 ]; then
+            cd $path_index
+            cat $filename
+            exit 0
+        fi
+    done
+    echo "legit-show: error: '$filename' not found in index"
+    exit 1
+fi

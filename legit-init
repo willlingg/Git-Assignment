@@ -1,0 +1,21 @@
+#!/usr/bin/env dash
+
+export PATH="$PATH:."
+
+args=$#
+
+if [ $args -ne 0 ]; then
+    echo "usage: legit-init"
+    exit 1
+fi
+
+if [ -d .legit ];then
+    echo "legit-init: error: .legit already exists"
+else
+    mkdir .legit
+    echo "Initialized empty legit repository in .legit"
+fi
+
+#Create the log file
+cd .legit
+touch commit_log

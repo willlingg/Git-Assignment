@@ -1,0 +1,23 @@
+03-07-2019|13:02|14:23|coding|Planning of project and finishing up legit-init
+03-07-2019|17:34|19:28|coding|Creating error messages for legit-add
+03-07-2019|19:30|20:07|coding|Making test scripts and working on -rm section for legit-add
+03-07-2019|20:10|21:00|debugging/planning|Debugging error messages in legit-add --> Also began planning legit-commit
+05-07-2019|10:00|11:57|coding|Working out the features of commit. Realised add and commit go hand in hand
+05-07-2019|13:00|13:45|coding|legit-commit is almost done. Making more test-scripts for legit-commit and legit-add
+05-07-2019|14:00|15:30|coding|Finished up legit-log. This was pretty simple. Wrote up some test cases for it too
+12-07-2019|11:00|12:00|Planning|Been busy with other exams/assignments. Have to plan everything out again!
+12-07-2019|12:00|13:00|coding|Began working on legit-show. Quite a few different error messages to implement
+12-07-2019|13:00|14:00|coding|Fixing up small errors. Beginning to run auto-tests against personal test scripts
+12-07-2019|14:00|17:00|coding/debugging| Ran into a bit of a problem. Reference implementation shows that I've been doing legit-add differently. In the process of fixing that up
+12-07-2019|19:00|21:00|coding|Managed to fix up the problem by implementing another directory
+12-07-2019|21:00|11:00|coding|Looks like subset 0 is all complete!! Wrote a bunch more test-scripts to test 
+12-07-2019|11:00|00:00|cleaning| Cleaning up code to make it presentable. Planning for subset 1/2 tomorrow
+13-07-2019|09:30|11:00|coding| Completed the -a option for commit. Made a couple test scripts and ran successfully
+13-07-2019|11:00|16:00|coding| Got most of legit-rm working. Just figuring out error messages
+13-07-2019|17:00|19:00|coding| Figuring out how to implement commit message with legit-rm
+13-07-2019|20:00|21:00|finalising| Choosing which test scripts should be in the final 10 for submission.
+13-07-2019|21:00|22:00|coding| Trying to complete legit-status but I won't be able to finish. Got work tomorrow too. I should have started sooner lol.
+
+Anyway, this assignment has taught me a lot about bash and git. Thanks for marking and reading through my stuff :)
+
+

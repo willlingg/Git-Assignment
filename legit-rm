@@ -1,0 +1,155 @@
+#!/usr/bin/env dash
+
+#Checking if force and cached arguments are given
+cached='False'
+force='False'
+case "$*" in
+(*--cached*) cached='True';;
+esac
+case "$*" in
+(*--force*) force='True';;
+esac
+
+args=$#
+encode_key=locked
+
+
+#Checking if .legit file exists
+if [ ! -d .legit ]; then
+    echo "legit-add: error: no .legit directory containing legit repository exists"
+    exit 1
+fi
+
+#Checking if we have commits
+if [ ! -d "./.legit/commit_dir" ]; then
+    echo "legit-log: error: your repository does not have any commits yet"
+    exit 1
+fi
+path_commit_dir="./.legit/commit_dir"
+no_of_commits=`ls -l $path_commit_dir | grep -c ^d`
+no_of_commits=`expr $no_of_commits - 1`
+
+
+#Check if we have the write number of args
+if [ $args -lt 1 ]; then
+    echo "usage: legit-rm [--force] [--cached] <filenames>"
+    exit 1
+fi
+
+#If only filename arg is given, we remove from CD and index
+if [ $cached = 'False' ] && [ $force = 'False' ]; then
+    for file in "$@"; do
+        if echo $file | egrep -q '^-'; then
+            echo "usage: legit-rm [--force] [--cached] <filenames>"
+            exit 1
+        elif ! echo $file | egrep -q '^[A-Za-z0-9]+[\._-]*'; then
+            echo "legit-add: error: invalid filename '$file'"
+            exit 1
+        elif [ ! -f $file ] && [ ! -f "./.legit/staging/$file" ]; then
+            echo "legit-rm: error: '$file' is not in the legit repository"
+            exit 1
+        elif ! diff ./$file "$path_commit_dir/commit$no_of_commits/"$file$encode_key >/dev/null 2>&1; then
+            if ! diff ./$file "./.legit/staging/$file" >/dev/null 2>&1; then
+                if [ ! -f "./.legit/staging" ]; then
+                    echo "legit-rm: error: '$file' is not in the legit repository"
+                    exit 1
+                else
+                    echo "legit-rm: error: '$file' in index is different to both working file and repository"
+                    exit 1
+                fi
+            elif [ ! -f "$path_commit_dir/commit$no_of_commits/"$file$encode_key ]; then
+                echo "legit-rm: error: '$file' has changes staged in the index"
+                exit 1        
+            else
+                echo "legit-rm: error: '$file' in repository is different to working file"
+                exit 1
+            fi
+        fi
+    done
+    for file in "$@"; do
+        rm ./$file 2>&1
+        if [ -f "./.legit/index/$file" ]; then
+            rm "./.legit/index/$file" 2>&1
+        fi
+        rm "./.legit/staging/$file" 2>&1
+    done
+    exit 0
+elif [ $cached = 'True' ] && [ $force = 'False' ]; then
+    for file in "$@"; do
+        if [ $file != '--cached' ] && [ $file != '--force' ]; then
+            if echo $file | egrep -q '^-'; then
+                echo "usage: legit-rm [--force] [--cached] <filenames>"
+                exit 1
+            elif ! echo $file | egrep -q '^[A-Za-z0-9]+[\._-]*'; then
+                echo "legit-add: error: invalid filename '$file'"
+                exit 1
+            elif [ ! -f "./.legit/staging/$file" ]; then
+                echo "legit-rm: error: '$file' is not in the legit repository"
+                exit 1
+            elif ! diff ./$file "$path_commit_dir/commit$no_of_commits/"$file$encode_key >/dev/null 2>&1; then
+                if ! diff ./$file "./.legit/staging/$file" >/dev/null 2>&1; then
+                    echo "legit-rm: error: '$file' in index is different to both working file and repository"
+                    exit 1
+                fi
+            fi
+        fi
+    done
+    for file in "$@"; do
+        if [ $file != '--cached' ]; then
+            if [ -f "./.legit/index/$file" ]; then
+                rm "./.legit/index/$file" 2>&1
+            fi
+            rm "./.legit/staging/$file" 2>&1
+        fi
+    done
+    exit 0
+elif [ $force = 'True' ] && [ $cache = 'False' ]; then
+    for file in "$@"; do
+        if [ $file != '--cached' ] && [ $file != '--force' ]; then
+            if echo $file | egrep -q '^-'; then
+                echo "usage: legit-rm [--force] [--cached] <filenames>"
+                exit 1
+            elif ! echo $file | egrep -q '^[A-Za-z0-9]+[\._-]*'; then
+                echo "legit-add: error: invalid filename '$file'"
+                exit 1
+            elif [ ! -f "./.legit/staging/$file" ]; then
+                echo "legit-rm: error: '$file' is not in the legit repository"
+                exit 1
+            fi
+        fi
+    done
+    for file in "$@"; do
+        if [ $file !- '--force' ]; then
+            rm ./$file 2>&1
+            if [ -f "./.legit/index/$file" ]; then
+                rm "./.legit/index/$file" 2>&1
+            fi
+            rm "./.legit/staging/$file" 2>&1
+        fi
+    done
+    exit 0
+else
+    for file in "$@"; do
+        if [ $file != '--cached' ] && [ $file != '--force' ]; then
+            if echo $file | egrep -q '^-'; then
+                echo "usage: legit-rm [--force] [--cached] <filenames>"
+                exit 1
+            elif ! echo $file | egrep -q '^[A-Za-z0-9]+[\._-]*'; then
+                echo "legit-add: error: invalid filename '$file'"
+                exit 1
+            elif [ ! -f "./.legit/staging/$file" ]; then
+                echo "legit-rm: error: '$file' is not in the legit repository"
+                exit 1
+            fi
+        fi
+    done
+    for file in "$@"; do
+        if [ $file != '--cached' ] || [ $file !- '--force' ]; then
+            if [ -f "./.legit/index/$file" ]; then
+                rm "./.legit/index/$file" 2>&1
+            fi
+            rm "./.legit/staging/$file" 2>&1
+        fi
+    done
+    exit 0
+fi

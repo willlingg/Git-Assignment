@@ -1,0 +1,132 @@
+#!/usr/bin/env dash
+
+#Key to get to the committed files
+encode_key=locked
+
+arguments=$#
+
+if [ ! -d "./.legit/index" ]; then
+    echo nothing to commit
+    exit 1
+else
+    path_index="./.legit/index"
+    path_deletion="./.legit/deletion" 2>&1
+    path_staging="./.legit/staging" 2>&1
+fi
+
+
+#Checking if repository exists
+if [ ! -d .legit ]; then
+    echo "legit-commit: error: no .legit directory containing legit repository exists"
+    exit 1
+fi
+
+#Making sure we have the right number of arguments
+if [ $arguments -ne 2 ] && [ $arguments -ne 3 ]; then
+    echo "usage: legit-commit [-a] -m commit-message"
+    exit 1
+fi
+
+#Error messages for -a and -m
+if [ $arguments -eq 2 ]; then
+    if [ "$1" != '-m' ]; then
+        echo "usage: legit-commit [-a] -m commit-message"
+        exit 1
+    fi
+    commit_message=$2
+fi
+
+#Error messages for -a and -m
+if [ $arguments -eq 3 ]; then
+    if [ "$1" != '-a' ] && [ "$2" != '-m' ]; then
+        echo "usage: legit-commit [-a] -m commit-message"
+        exit 1
+    fi
+    commit_message=$3
+fi
+
+
+#Creating commit directory to store our commits in
+if [ ! -d "./.legit/commit_dir" ]; then
+    mkdir "./.legit/commit_dir" 2>&1
+fi
+path_commit_dir="./.legit/commit_dir"
+no_of_commits=`ls -l $path_commit_dir | grep -c ^d`
+
+
+
+#If files is removed it is taken out of index as well
+if [ $1 = '-a' ]; then
+    mkdir "./.legit/tmp" 2>&1 #Using temp folder to store previous commits
+    rm -rf ./.legit/tmp/* 2>&1
+    for file in $path_staging/*; do
+        cp $file "./.legit/tmp"
+        if [ ! -f "./${file##*/}" ]; then
+            rm $file
+        elif ! diff "$file" "./${file##*/}" >/dev/null 2>&1; then #if the files are modified, copy the file over to staging
+            cp "./${file##*/}" $path_staging >/dev/null 2>&1
+        fi
+    done
+    #Now that we have our two folders set up, we compare tmp with staging
+    if ! diff $path_staging "./.legit/tmp" >/dev/null 2>&1; then #If there is a difference, we commit
+        mkdir "$path_commit_dir/commit"$no_of_commits 2>&1
+        cp -a $path_staging/. $path_index
+        for file in $path_index/*; do
+            mv $file $file$encode_key
+            cp $file$encode_key "$path_commit_dir/commit$no_of_commits"
+            rm $file$encode_key
+        done
+        echo Committed as commit $no_of_commits
+        cd .legit
+        echo $no_of_commits $commit_message >> commit_log
+        rm -rf "./.legit/tmp"
+        exit 0
+    else
+        echo nothing to commit
+        cd .legit
+        echo $no_of_commits $commit_message >> commit_log
+        rm -rf "./.legit/tmp"
+        exit 0
+    fi
+
+fi
+
+
+
+#Checking if index folder exists. Also checking if its empty or not
+if [ `ls -A $path_index | wc -m` -eq 0 2>/dev/null ] || [ ! -d $path_index 2>&1 ]; then
+    if [ ! `ls -A $path_deletion | wc -m` -eq 0 2>/dev/null ]; then
+        mkdir "$path_commit_dir/commit"$no_of_commits #makes an empty directory in the case of deletion
+        for file in $path_deletion/*; do
+            rm $file
+        done
+        echo Committed as commit $no_of_commits
+        cd .legit
+        echo $no_of_commits $commit_message >> commit_log
+        exit 0
+    else
+        echo nothing to commit
+        exit 1
+    fi
+fi
+
+
+#Checking if we have any commits or not. If we do, we make our corresponding commit folder
+#If we don't, we make commit0
+if [ `ls -A $path_commit_dir | wc -m` -eq 0 2>/dev/null ]; then
+    mkdir "$path_commit_dir/commit0" 2>&1
+else
+    mkdir "$path_commit_dir/commit"$no_of_commits 2>&1
+fi
+
+
+#Now we encode the index files and copy to commit folder and wipe the index
+for file in $path_index/*; do
+    mv $file $file$encode_key
+    cp $file$encode_key "$path_commit_dir/commit$no_of_commits"
+    rm $file$encode_key
+done
+
+echo Committed as commit $no_of_commits
+cd .legit
+echo $no_of_commits $commit_message >> commit_log
